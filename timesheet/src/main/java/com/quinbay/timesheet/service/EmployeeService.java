@@ -4,7 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quinbay.timesheet.api.EmployeeInterface;
 import com.quinbay.timesheet.model.Employee;
+import com.quinbay.timesheet.model.EmployeeRequest;
+import com.quinbay.timesheet.model.EmployeeResponse;
+import com.quinbay.timesheet.model.Timesheet;
 import com.quinbay.timesheet.repository.EmployeeRepository;
+import com.quinbay.timesheet.repository.TimesheetRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,29 +23,31 @@ public class EmployeeService implements EmployeeInterface {
     @Autowired
     EmployeeRepository employeeRepository;
 
+    @Autowired
+    TimesheetRepository timesheetRepository;
+
 
     @Override
-    public ResponseEntity<Object> authUser(String email, String password) {
+    public Object authUser(EmployeeRequest employeeRequest) {
         try {
-            Optional<Employee> opt = employeeRepository.findByEmailAndPassword(email, password);
-            opt.get().setPassword("****");
+            Optional<Employee> opt = employeeRepository.findByEmailAndPassword(employeeRequest.getEmail(), employeeRequest.getPassword());
 
             if (opt.isPresent()) {
-
-
-                return new ResponseEntity<Object>(opt,HttpStatus.OK);
+                EmployeeResponse employeeResponse = new EmployeeResponse(opt.get().getEmpName(),opt.get().getEmpCode(),opt.get().getPhone(),
+                        opt.get().getEmail(),opt.get().getManagerId(),opt.get().getRole());
+                return employeeResponse;
             } else {
                 String message ="Username or password is incorrect";
-                return new ResponseEntity<Object>(message,HttpStatus.UNAUTHORIZED);
+                return message;
             }
         } catch (Exception e) {
             String message ="Username or password is incorrect";
-            return new ResponseEntity<Object>(message,HttpStatus.UNAUTHORIZED);
+            return message;
         }
     }
 
     @Override
-    public ResponseEntity<String> getDetails() {
+    public String getDetails() {
         List<Employee> employees = employeeRepository.findAll();
         List<List<String>> myList = new ArrayList<>();
 
@@ -61,6 +67,28 @@ public class EmployeeService implements EmployeeInterface {
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
-        return new ResponseEntity<String>(jsonString,HttpStatus.OK);
+        return jsonString;
+    }
+
+    @Override
+    public List<Employee> getAllEmployees(){
+        return employeeRepository.findAll();
+    }
+
+    @Override
+    public String changeManager(String empCode,String managerId){
+        Optional<Employee> changeManagerEmployee = employeeRepository.findByEmpCode(empCode);
+
+        List<Timesheet> changeManagerTimesheet = timesheetRepository.findByEmpCode(empCode);
+
+        if(changeManagerEmployee.isPresent()){
+            changeManagerEmployee.get().setManagerId(managerId);
+            employeeRepository.save(changeManagerEmployee.get());
+        }
+        for(Timesheet t : changeManagerTimesheet){
+            t.setManagerId(managerId);
+            timesheetRepository.save(t);
+        }
+        return "Manager updated successfully";
     }
 }

@@ -1,10 +1,18 @@
 package com.quinbay.timesheet.api;
 
-import org.springframework.http.ResponseEntity;
+import com.quinbay.timesheet.model.Employee;
+import com.quinbay.timesheet.model.EmployeeRequest;
+import java.util.List;
 
 public interface EmployeeInterface {
-    //ResponseEntity<HashMap<String,String>> authUser(String email, String password);
-    ResponseEntity<String> getDetails();
+    String getDetails();
 
-    ResponseEntity<Object> authUser(String email, String password);
+    Object authUser(EmployeeRequest employeeRequest);
+
+
+    String changeManager(String empCode,String managerId);
+
+    List<Employee> getAllEmployees();
+
+
 }

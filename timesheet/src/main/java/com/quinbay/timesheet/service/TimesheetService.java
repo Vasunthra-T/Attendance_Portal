@@ -1,25 +1,26 @@
 package com.quinbay.timesheet.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.quinbay.timesheet.api.SummaryInterface;
 import com.quinbay.timesheet.api.TimesheetInterface;
+import com.quinbay.timesheet.kafka.KafkaPublishingService;
 import com.quinbay.timesheet.model.*;
 import com.quinbay.timesheet.repository.ApprovalRepository;
 import com.quinbay.timesheet.repository.EmployeeRepository;
 import com.quinbay.timesheet.repository.TimesheetRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import static java.util.stream.Collectors.toList;
+import java.util.*;
 
 @Service
 public class TimesheetService implements TimesheetInterface {
@@ -38,32 +39,44 @@ public class TimesheetService implements TimesheetInterface {
     ApprovalRepository approvalRepository;
 
     @Autowired
-    SummaryInterface summaryInterface;
+    KafkaPublishingService kafkaPublishingService;
 
 
     @Override
-    public ResponseEntity<String> addTimesheet(TimesheetPojo timesheetPojo) {
-        Optional<Employee> opt = employeeRepository.findByEmpCode(timesheetPojo.getEmpCode());
+    public String addTimesheet(TimesheetRequest timesheetRequest) {
+        Optional<Employee> opt = employeeRepository.findByEmpCode(timesheetRequest.getEmpCode());
+        Optional<Timesheet> time = timesheetRepository.findByEmpCodeAndWorkingDate(timesheetRequest.getEmpCode(), timesheetRequest.getWorkingDate());
         Approval.Status status = Approval.Status.WAITING_FOR_APPROVAL;
 
-        if (timesheetPojo.getHours() <= 6 || (timesheetPojo.getInType() == Timesheet.InType.WORK_FROM_HOME)) {
-            status = Approval.Status.WAITING_FOR_APPROVAL;
+        if (time.isPresent()) {
+            time.get().getEmpCode();
+            return "Entry is added already in the timesheet";
         } else {
-            status = Approval.Status.APPROVED;
+
+            if (opt.get().getManagerId().equals("")) {
+                status = Approval.Status.APPROVED;
+            } else if (timesheetRequest.getProductiveHours() <= 6 || (timesheetRequest.getInType() == Timesheet.InType.WORK_FROM_HOME) || (timesheetRequest.getInType() == Timesheet.InType.BOTH)) {
+                status = Approval.Status.WAITING_FOR_APPROVAL;
+            } else {
+                status = Approval.Status.APPROVED;
+            }
+            Double actualHours = calculateHours(opt.get().getEmpCode(), timesheetRequest.getWorkingDate());
+
+            Timesheet timesheet = new Timesheet(opt.get().getEmpName(), timesheetRequest.getEmpCode(), opt.get().getManagerId(), timesheetRequest.getWorkingDate(), timesheetRequest.getWfhHours(), timesheetRequest.getOfficeHours(), timesheetRequest.getProductiveHours(), actualHours, timesheetRequest.getInType(), status);
+            timesheetRepository.save(timesheet); //save timesheet first
+
+            Approval approval = new Approval(timesheetRequest.getEmpCode(), timesheetRequest.getDayCount(), timesheetRequest.getPeriod(), status, timesheet);
+            timesheet.setApproval(approval);
+            approvalRepository.save(approval);
+
+            TimesheetApproval timesheetApproval = new TimesheetApproval(timesheetRequest.getEmpCode(), opt.get().getEmpName(), timesheetRequest.getWorkingDate(), timesheetRequest.getProductiveHours(), timesheetRequest.getInType(), status);
+            kafkaPublishingService.sendTimesheetApprovalDetails(timesheetApproval);
+            return "Timesheet added successfully";
         }
-
-        Timesheet timesheet = new Timesheet(opt.get().getEmpName(), timesheetPojo.getEmpCode(), timesheetPojo.getManagerId(), timesheetPojo.getWorkingDate(), timesheetPojo.getHours(), timesheetPojo.getInType(), status);
-        timesheetRepository.save(timesheet); //save timesheet first
-
-        Approval approval = new Approval(timesheetPojo.getEmpCode(), timesheetPojo.getManagerId(), timesheetPojo.getDayCount(), timesheetPojo.getPeriod(), status, timesheet);
-        timesheet.setApproval(approval);
-        approvalRepository.save(approval);
-
-        return new ResponseEntity<String>("Timesheet added successfully", HttpStatus.ACCEPTED);
     }
 
     @Override
-    public ResponseEntity<Double> calculateHours(String empCode, LocalDate workingDate) {
+    public Double calculateHours(String empCode, LocalDate workingDate) {
 
         String url = UriComponentsBuilder.fromHttpUrl("http://localhost:8081/simulate/calculateHours")
                 .queryParam("empCode", empCode)
@@ -74,131 +87,141 @@ public class TimesheetService implements TimesheetInterface {
         HttpEntity<String> entity = new HttpEntity<String>(headers);
 
         Double totalHours = restTemplate().getForObject(url, Double.class);
-        System.out.println(totalHours);
-        return new ResponseEntity<Double>(totalHours, HttpStatus.OK);
+        return totalHours;
     }
 
     @Override
-    public ResponseEntity<Object> getEmployeeDetails(String empCode) {
+    public Object getEmployeeDetails(String empCode) {
         Optional<Employee> employees = employeeRepository.findByEmpCode(empCode);
         String role = employees.get().getRole();
 
-        return new ResponseEntity<Object>("",HttpStatus.OK);
+        if (employees.isPresent()) {
+            Set<BasicDetails> mySet = new HashSet<>();
+            if (role.equals("Manager")) {
+                List<Timesheet> subordinates = timesheetRepository.findByManagerId(empCode);
+                List<Timesheet> manager = timesheetRepository.findByEmpCode(empCode);
+                for (Timesheet emp : manager) {
+                    BasicDetails basicDetails = new BasicDetails();
+                    basicDetails.setEmpCode(empCode);
+                    basicDetails.setEmpName(emp.getEmpName());
+                    mySet.add(basicDetails);
+                }
+
+                for (Timesheet employee : subordinates) {
+                    BasicDetails basicDetails = new BasicDetails();
+                    basicDetails.setEmpCode(employee.getEmpCode());
+                    basicDetails.setEmpName(employee.getEmpName());
+                    mySet.add(basicDetails);
+                }
+            } else {
+                BasicDetails basicDetails = new BasicDetails();
+                basicDetails.setEmpCode(employees.get().getEmpCode());
+                basicDetails.setEmpName(employees.get().getEmpName());
+                mySet.add(basicDetails);
+            }
+            return mySet;
+        } else {
+            return "Employee not found";
+        }
+    }
+
+    @Override
+    public List<TimesheetResponse> generateSummary(String empCode, LocalDate fromDate, LocalDate toDate) {
+        if (fromDate.equals(toDate)) {
+            List<LocalDate> weekDates = Arrays.asList(DayOfWeek.values()).stream().map(toDate::with).collect(toList());
+
+            for (LocalDate date : weekDates) {
+                if (date.getDayOfWeek().equals(DayOfWeek.MONDAY)) {
+                    fromDate = date;
+                    return fetchFromTimesheet(empCode, fromDate, toDate);
+                }
+            }
+        } else {
+            return fetchFromTimesheet(empCode, fromDate, toDate);
+        }
+        return fetchFromTimesheet(empCode, fromDate, toDate);
+    }
+
+    @Override
+    public List<TimesheetResponse> fetchFromTimesheet(String empCode, LocalDate fromDate, LocalDate toDate) {
+        List<TimesheetResponse> myList = new ArrayList<>();
+
+        try {
+            List<Timesheet> filterTimesheet = timesheetRepository.findByEmpCodeAndWorkingDateBetween(empCode, fromDate, toDate);
+
+            for (Timesheet time : filterTimesheet) {
+                TimesheetResponse correctTimesheet = new TimesheetResponse(empCode, time.getEmpName(), time.getWorkingDate(), time.getProductiveHours(), time.getInType(), time.getApproval().getStatus());
+                myList.add(correctTimesheet);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return myList;
+    }
+
+    @Override
+    public List<Simulator> getSimulatorDetails(String empCode, LocalDate workingDate) {
+        String url = UriComponentsBuilder.fromHttpUrl("http://localhost:8081/simulate/getDetails")
+                .queryParam("empCode", empCode)
+                .queryParam("workingDate", workingDate)
+                .toUriString();
+
+        ParameterizedTypeReference<List<Simulator>> typeReference = new ParameterizedTypeReference<List<Simulator>>() {
+        };
+        ResponseEntity<List<Simulator>> response = restTemplate().exchange(url, HttpMethod.GET, null, typeReference);
+        List<Simulator> simulators = response.getBody();
+        return simulators;
+    }
+
+    @Override
+    public List<Timesheet> displayAll() {
+        List<Timesheet> timesheetList = timesheetRepository.findAll();
+        return timesheetList;
+    }
+
+    @Override
+    public String approveEmployee(String empCode, LocalDate workingDate, Approval.Status status) {
+        Optional<Timesheet> opt = timesheetRepository.findByEmpCodeAndWorkingDate(empCode, workingDate);
+        System.out.println(opt.get().getEmpCode());
+        System.out.println(opt.get().getWorkingDate());
+        if (opt.isPresent()) {
+            if (opt.get().getStatus().equals(Approval.Status.WAITING_FOR_APPROVAL)) {
+                opt.get().getApproval().setStatus(status);
+                opt.get().setStatus(status);
+                timesheetRepository.save(opt.get());
+                return " Timesheet entry approved successfully";
+            }
+        }
+        return "Employee doesn't exist";
+    }
+
+
+    @Override
+    public List<TimesheetResponse> generateSummaryByPaging(String empCode, LocalDate fromDate, LocalDate toDate, int pageNo, int pageSize) {
+        List<TimesheetResponse> myList = new ArrayList<>();
+
+        try {
+            Pageable paging = PageRequest.of(pageNo, pageSize);
+            List<Timesheet> page = timesheetRepository.findByEmpCodeAndWorkingDateBetween(empCode, fromDate, toDate, paging);
+
+            for (Timesheet time : page) {
+                TimesheetResponse correctTimesheet = new TimesheetResponse(empCode, time.getEmpName(), time.getWorkingDate(), time.getProductiveHours(), time.getInType(), time.getStatus());
+                myList.add(correctTimesheet);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+
+        }
+        return myList;
 
     }
+}
 
 //    @Override
-//    public ResponseEntity<String> getEmployeeDetails(String empCode) {
-//        Optional<Employee> employees = employeeRepository.findByEmpCode(empCode);
-//        String role = employees.get().getRole();
-//
-//        List<List<String>> myList = new ArrayList<>();
-//
-//        ObjectMapper mapper = new ObjectMapper();
-//        String jsonString="";
-//
-//        if(role.equals("Manager")){
-//            List<Timesheet> subordinates = timesheetRepository.findByManagerId(empCode);
-//            try {
-//
-//                for (Timesheet employee : subordinates) {
-//                    List<String> list1 = new ArrayList<>();
-//
-//                    list1.add(employee.getEmpCode());
-//                    list1.add(employee.getEmpName());
-//                    myList.add(list1);
-//                }
-//                List<String> list2 = new ArrayList<>();
-//                list2.add(employees.get().getEmpCode());
-//                list2.add(employees.get().getEmpName());
-//
-//                myList.add(list2);
-//                jsonString = mapper.writeValueAsString(myList);
-//
-//            } catch (JsonProcessingException e) {
-//                e.printStackTrace();
-//            }
-//
-//        }
-//        else {
-//            try {
-//                List<String> list1 = new ArrayList<>();
-//                list1.add(employees.get().getEmpCode());
-//                list1.add(employees.get().getEmpName());
-//
-//                myList.add(list1);
-//                jsonString = mapper.writeValueAsString(myList);
-//
-//            } catch (JsonProcessingException e) {
-//                e.printStackTrace();
-//            }
-//        }
-//            return new ResponseEntity<String>(jsonString, HttpStatus.OK);
-//        }
-
-
-
-
-   @Override
-    public List<TimesheetShowPojo> generateSummary(String empCode, LocalDate fromDate, LocalDate toDate) {
-        System.out.println(fromDate);
-        System.out.println(toDate);
-
-      //  Optional<Employee> opt = employeeRepository.findByEmpCode(empCode);
-        List<TimesheetShowPojo> myList = new ArrayList<>();
-        List<Timesheet> filterTimesheet = timesheetRepository.findByEmpCodeAndWorkingDateBetween(empCode, fromDate, toDate);
-        System.out.println(filterTimesheet.get(0).getEmpName());
-        for (Timesheet time : filterTimesheet) {
-            TimesheetShowPojo correctTimesheet = new TimesheetShowPojo(empCode, time.getEmpName(), time.getWorkingDate(), time.getHours(), time.getInType(), time.getStatus());
-            myList.add(correctTimesheet);
-        }
-       summaryInterface.generatePdf(myList);
-
-
-       return myList;
-    }
-
-//        String role = opt.get().getRole();
-//        String emp = opt.get().getEmpCode();
-//        System.out.println(emp);
-//        if (role.equals("Manager")) {
-//            if (opt.get().getEmpCode().equals(empCode)) {
-//                List<Timesheet> filterTimesheet = timesheetRepository.findByEmpCodeAndWorkingDateBetween(empCode, fromDate, toDate);
-//                System.out.println(filterTimesheet.get(0).getEmpName());
-//                for (Timesheet time : filterTimesheet) {
-//                    TimesheetShowPojo correctTimesheet = new TimesheetShowPojo(empCode, time.getEmpName(), time.getWorkingDate(), time.getHours(), time.getInType(), time.getStatus());
-//                    myList.add(correctTimesheet);
-//                }
-//                return myList;
-//
-//            } else {
-//
-//                System.out.println(role);
-//
-//                List<Timesheet> subordinates = timesheetRepository.findByManagerIdAndWorkingDateBetween(empCode, fromDate, toDate);
-//                System.out.println(subordinates.get(0).getEmpCode());
-//
-//                System.out.println(subordinates.get(0).getEmpName());
-//                for (Timesheet time : subordinates) {
-//                    TimesheetShowPojo correctTimesheet = new TimesheetShowPojo(time.getEmpCode(), time.getEmpName(), time.getWorkingDate(), time.getHours(), time.getInType(), time.getStatus());
-//                    myList.add(correctTimesheet);
-//                }
-//                return myList;
-//            }
-//        }
-//
-//         else {
-//
-//            List<Timesheet> filterTimesheet = timesheetRepository.findByEmpCodeAndWorkingDateBetween(empCode, fromDate, toDate);
-//            System.out.println(filterTimesheet.get(0).getEmpName());
-//            for (Timesheet time : filterTimesheet) {
-//                TimesheetShowPojo correctTimesheet = new TimesheetShowPojo(empCode, time.getEmpName(), time.getWorkingDate(), time.getHours(), time.getInType(), time.getStatus());
-//                myList.add(correctTimesheet);
-//            }
-//            return myList;
-//
-//        }
-//
-//
+//    public List<Timesheet> displayByPages(int pageNo, int pageSize){
+//        Pageable paging  = PageRequest.of(pageNo,pageSize);
+//        Page<Timesheet> page =timesheetRepository.findAll(paging);
+//        return page.toList();
 //    }
-}
+
+

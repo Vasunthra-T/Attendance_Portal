@@ -6,17 +6,17 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class TimesheetPojo implements Serializable {
-    String empCode;
-    String managerId;
-    LocalDate workingDate;
-    Double hours;
-    Timesheet.InType inType;
-    Double dayCount;
-    Approval.Period period;
+public class Simulator implements Serializable {
+    Integer id;
 
+    String empCode;
+
+    LocalDate workingDate;
+    LocalDateTime inTime;
+    LocalDateTime outTime;
 }

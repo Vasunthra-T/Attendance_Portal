@@ -4,17 +4,23 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.Id;
 import java.io.Serializable;
 import java.time.LocalDate;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Hours implements Serializable {
-    @Id
-    Integer id;
-    String emp_code;
+public class TimesheetApproval implements Serializable {
+    String empCode;
+
+    String empName;
+
     LocalDate workingDate;
-    Double hours;
+
+    Double productiveHours;
+
+    Timesheet.InType inType;
+
+    Approval.Status status;
+
 }

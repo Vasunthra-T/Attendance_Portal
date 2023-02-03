@@ -1,6 +1,5 @@
 package com.quinbay.timesheet.model;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class BasicReturn {
-    String empCode;
-    String empName;
+public class EmployeeRequest {
+    String email;
+    String password;
 }

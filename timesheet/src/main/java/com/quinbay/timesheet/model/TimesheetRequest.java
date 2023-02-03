@@ -4,18 +4,21 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.time.LocalDate;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ApprovalPojo {
+public class TimesheetRequest implements Serializable {
     String empCode;
-    String empName;
+    String managerId;
     LocalDate workingDate;
-    Double hours;
+    Double wfhHours;
+    Double officeHours;
+    Double productiveHours;
     Timesheet.InType inType;
+    Double dayCount;
     Approval.Period period;
-    Approval.Status status;
 
 }
