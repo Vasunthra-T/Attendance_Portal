@@ -8,6 +8,7 @@ import lombok.Setter;
 import javax.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -17,7 +18,8 @@ import java.time.LocalDate;
 @Table(name="hours")
 public class Hours implements Serializable {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @SequenceGenerator(name = "my_seq", sequenceName = "my_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "my_seq")
     Integer id;
 
     @Column(name = "emp_code")
@@ -28,7 +30,13 @@ public class Hours implements Serializable {
     LocalDate workingDate;
 
 
-    @Column(name = "hours")
-    Double hours;
+    @Column(name = "actual_hours")
+    Double actualHours;
+
+    public Hours(String empCode, LocalDate workingDate, Double actualHours){
+        this.empCode = empCode;
+        this.workingDate = workingDate;
+        this.actualHours = actualHours;
+    }
 
 }

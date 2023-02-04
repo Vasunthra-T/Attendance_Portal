@@ -5,10 +5,18 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface SimulatorRepository extends JpaRepository<Simulator,Integer> {
-    Optional<Simulator> findByEmpCodeAndWorkingDate(String empCode, LocalDate workingDate);
+    List<Simulator> findByEmpCodeAndWorkingDate(String empCode, LocalDate workingDate);
+
+
+
+
+
+   // Optional<Simulator> findByEmpCodeAndInTime(String empCode, LocalDate find);
 
 }

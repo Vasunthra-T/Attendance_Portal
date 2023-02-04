@@ -1,11 +1,15 @@
 package com.quinbay.simulator.api;
 
-import com.quinbay.simulator.model.SimulatorPojo;
+import com.quinbay.simulator.model.Simulator;
+import com.quinbay.simulator.model.SimulatorRequest;
 import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public interface SimulatorInterface {
-    ResponseEntity<String> addSimulator(SimulatorPojo simulatorPojo);
-    ResponseEntity<Double> calculateHours(String empCode, LocalDate workingDate);
+    String addSimulator(SimulatorRequest simulatorRequest);
+    Double calculateHours(String empCode, LocalDate workingDate);
+    List<Simulator> getDetails(String empCode,LocalDate workingDate);
+   String createEntry(SimulatorRequest simulatorRequest);
 }

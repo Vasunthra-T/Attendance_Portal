@@ -5,9 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 
 @Getter
 @Setter
@@ -17,12 +15,9 @@ import javax.persistence.Table;
 @Table(name="employee")
 public class Employee {
     @Id
-    int id;
-    String empName;
+    @SequenceGenerator(name = "my_key", sequenceName = "my_key", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "my_key")
+    Integer id;
     String empCode;
-    long phone;
-    String email;
-    String managerId;
-    String role;
-    String password;
+    String empName;
 }

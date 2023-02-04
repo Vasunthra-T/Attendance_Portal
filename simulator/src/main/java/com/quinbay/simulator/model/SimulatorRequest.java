@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class SimulatorPojo {
+public class SimulatorRequest {
     String empCode;
 
     LocalDateTime inTime;

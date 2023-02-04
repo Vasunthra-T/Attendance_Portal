@@ -10,21 +10,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-public class EmployeeService implements EmployeeInterface {
+public class EmployeeServiceImpl implements EmployeeInterface {
     @Autowired
     EmployeeRepository employeeRepository;
 
     @Override
     public List<String> showEmployee(){
-      //  List<Object> employees = employeeRepository.getEmpCode();
-//        Optional<Object> employees = employeeRepository.findAll();
-//       List<String> newList = new ArrayList<>() ;
-//       if(employees.isPresent()){
-//           newList.add(employees.getEmpCode)
-//       }
-//       newList.add(employees.get().getEmpCoe);
-
-
         List<Employee> employees = employeeRepository.findAll();
         List<String> myList = new ArrayList<>();
         for (Employee employee : employees) {
