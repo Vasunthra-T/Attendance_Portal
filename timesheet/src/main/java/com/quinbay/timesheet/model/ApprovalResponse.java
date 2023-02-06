@@ -14,7 +14,7 @@ public class ApprovalResponse {
     String empName;
     LocalDate workingDate;
     Double hours;
-    Timesheet.InType inType;
+    Approval.InType inType;
     Approval.Period leave_period;
     Approval.Status status;
 

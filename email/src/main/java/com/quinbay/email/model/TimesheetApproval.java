@@ -1,7 +1,6 @@
 package com.quinbay.email.model;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -11,7 +10,6 @@ import java.time.LocalDate;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
 @Entity
 public class TimesheetApproval {
     @Id
@@ -37,12 +35,12 @@ public class TimesheetApproval {
     @Column(name = "status")
     Approval.Status status;
 
-    public TimesheetApproval(String empCode, String empName, LocalDate workingDate, Double productiveHours, Timesheet.InType inType,  Approval.Status status) {
-        this.empCode = empCode;
-        this.empName = empName;
-        this.workingDate = workingDate;
-        this.productiveHours = productiveHours;
-        this.inType = inType;
-        this.status = status;
-    }
+//    public TimesheetApproval(String empCode, String empName, LocalDate workingDate, Double productiveHours, Timesheet.InType inType,  Approval.Status status) {
+//        this.empCode = empCode;
+//        this.empName = empName;
+//        this.workingDate = workingDate;
+//        this.productiveHours = productiveHours;
+//        this.inType = inType;
+//        this.status = status;
+//    }
 }

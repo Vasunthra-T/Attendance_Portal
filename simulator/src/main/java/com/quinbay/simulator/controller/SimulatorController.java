@@ -1,8 +1,9 @@
 package com.quinbay.simulator.controller;
 
-import com.quinbay.simulator.api.SimulatorInterface;
+import com.quinbay.simulator.api.SimulatorService;
 import com.quinbay.simulator.model.Simulator;
 import com.quinbay.simulator.model.SimulatorRequest;
+import com.quinbay.simulator.model.SimulatorResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -16,11 +17,11 @@ import java.util.List;
 @RequestMapping("/simulate")
 public class SimulatorController {
     @Autowired
-    SimulatorInterface simulatorInterface;
+    SimulatorService simulatorService;
 
     @PostMapping("addSimulator")
     public ResponseEntity<String> addSimulator(@RequestBody SimulatorRequest simulatorRequest){
-        String result = simulatorInterface.addSimulator(simulatorRequest);
+        String result = simulatorService.addSimulator(simulatorRequest);
         HttpStatus status = (result.equals("User doesn't exist")) ? HttpStatus.NOT_FOUND : HttpStatus.OK;
         return new ResponseEntity<>(result, status);
     }
@@ -28,13 +29,13 @@ public class SimulatorController {
     @GetMapping("calculateHours")
     public ResponseEntity<Double> calculateHours(@RequestParam String empCode, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate workingDate )
     {
-        Double result = simulatorInterface.calculateHours(empCode,workingDate);
+        Double result = simulatorService.calculateHours(empCode,workingDate);
         return new ResponseEntity<>(result, HttpStatus.OK);
 
     }
 
     @GetMapping("getDetails")
-    public List<Simulator> getDetails(@RequestParam String empCode, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate workingDate){
-        return simulatorInterface.getDetails(empCode,workingDate);
+    public List<SimulatorResponse> getDetails(@RequestParam String empCode, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate workingDate){
+        return simulatorService.getDetails(empCode,workingDate);
     }
 }

@@ -17,9 +17,6 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Table(name="timesheet")
 public class Timesheet implements Serializable {
-    public enum InType {
-        WORK_FROM_HOME, OFFICE, BOTH ;
-    }
 
     @Id
     @SequenceGenerator(name = "my_seq", sequenceName = "my_seq", allocationSize = 1)
@@ -50,21 +47,12 @@ public class Timesheet implements Serializable {
     @Column(name = "actual_simulator_hours")
     Double actualHours;
 
-    @Column(name = "in_type")
-    @Enumerated(EnumType.STRING)
-    InType inType;
-
-    @Column(name = "status")
-    @Enumerated(EnumType.STRING)
-    Approval.Status status;
-
-
-    @OneToOne(mappedBy = "timesheet", cascade = CascadeType.PERSIST)
+    @OneToOne( cascade = CascadeType.ALL)
     @JoinColumn(name = "approval_id", referencedColumnName = "id")
-    @JsonIgnore
+   //@JsonIgnore
     private Approval approval;
 
-    public Timesheet(String empName,String empCode,  String managerId, LocalDate workingDate,Double wfhHours,Double officeHours,Double productiveHours, Double actualHours, InType inType,Approval.Status status) {
+    public Timesheet(String empName,String empCode,  String managerId, LocalDate workingDate,Double wfhHours,Double officeHours,Double productiveHours, Double actualHours) {
         this.empName = empName;
         this.empCode = empCode;
         this.managerId = managerId;
@@ -73,27 +61,17 @@ public class Timesheet implements Serializable {
         this.officeHours = officeHours;
         this.productiveHours = productiveHours;
         this.actualHours = actualHours;
-        this.inType = inType;
-        if(approval != null) {
-            this.status = approval.getStatus();
-        }else{
-            this.status = status;
-        }
     }
 
-    public Timesheet( String empName,String empCode, String managerId, LocalDate workingDate, Double hours, InType inType, Approval.Period period, Approval.Status status) {
-        this.empName = empName;
-        this.empCode = empCode;
-        this.managerId = managerId;
-        this.workingDate = workingDate;
-        this.productiveHours = hours;
-        this.inType = inType;
-        this.approval.period = period;
-        if(approval != null)
-        {
-            this.status = approval.getStatus();
-        }else{
-            this.status = status;
-        }
-    }
+//    public Timesheet( String empName,String empCode, String managerId, LocalDate workingDate, Double hours, Approval.InType inType, Approval.Period period, Approval.Status status) {
+//        this.empName = empName;
+//        this.empCode = empCode;
+//        this.managerId = managerId;
+//        this.workingDate = workingDate;
+//        this.productiveHours = hours;
+//        this.approval.inType = inType;
+//        this.approval.period = period;
+//        this.approval.status = status;
+//    }
 }
+

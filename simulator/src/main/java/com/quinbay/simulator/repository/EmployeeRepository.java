@@ -9,10 +9,6 @@ import java.util.Optional;
 
 @Repository
 public interface EmployeeRepository extends JpaRepository<Employee,Integer> {
-//    @Query(value = "select emp_code from Employee",nativeQuery = true)
-//    List<Object> getEmpCode();
-
-   //Optional<Object> findAll();
    List<Employee> findAll();
 
    Optional<Employee> findByEmpCode(String empCode);

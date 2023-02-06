@@ -12,15 +12,8 @@ public class KafkaPublishingService {
     @Autowired
     ObjectMapper objectMapper;
 
-//    @Autowired
-//    KafkaTemplate kafkaTemplate;
-
     @Autowired
-    TimesheetRepository timesheetRepository;
-
-
-    @Autowired
-    private KafkaTemplate kafkaTemplate;
+    KafkaTemplate kafkaTemplate;
 
     public void sendTimesheetApprovalDetails(TimesheetApproval message) {
 
@@ -32,18 +25,8 @@ public class KafkaPublishingService {
         }
 
     }
+}
 
 
-    }
-
-//    public void sendWeeklyMail(Timesheet timesheet){
-//        try{
-//           // List<Timesheet> timesheetList = timesheetRepository.findAll();
-//            kafkaTemplate.send("send.timesheet", this.objectMapper.writeValueAsString(timesheet));
-//            System.out.println("\n\t Sent kafka message!!!!!!!!!");
-//        }catch(Exception e){
-//            System.out.println("Error is building "+ e);
-//        }
-//    }
 
 

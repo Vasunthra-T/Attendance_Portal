@@ -1,25 +1,22 @@
 package com.quinbay.simulator.service;
 
-import com.quinbay.simulator.api.SimulatorInterface;
-import com.quinbay.simulator.model.Employee;
-import com.quinbay.simulator.model.Hours;
-import com.quinbay.simulator.model.Simulator;
-import com.quinbay.simulator.model.SimulatorRequest;
+import com.quinbay.simulator.api.SimulatorService;
+import com.quinbay.simulator.model.*;
 import com.quinbay.simulator.repository.EmployeeRepository;
 import com.quinbay.simulator.repository.HoursRepository;
 import com.quinbay.simulator.repository.SimulatorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
-public class SimulatorServiceImpl implements SimulatorInterface {
+public class SimulatorServiceImpl implements SimulatorService {
     @Autowired
     SimulatorRepository simulatorRepository;
 
@@ -83,10 +80,11 @@ public class SimulatorServiceImpl implements SimulatorInterface {
 
                 Duration duration = Duration.between(s.getInTime(), s.getOutTime());
                 double hours = duration.toHours();
-               // double minutes = duration.toMinutes();
-              //  double hoursInMinutes = hours * 60;
-               // minutes = (minutes / 60) - hoursInMinutes;
+                // double minutes = duration.toMinutes();
+                //  double hoursInMinutes = hours * 60;
+                // minutes = (minutes / 60) - hoursInMinutes;
                 totalHours += hours;
+
             }
         }
         Hours addEntry = new Hours( empCode, workingDate, totalHours);
@@ -95,9 +93,19 @@ public class SimulatorServiceImpl implements SimulatorInterface {
         return totalHours;
     }
 
+
     @Override
-    public List<Simulator> getDetails(String empCode, LocalDate workingDate){
+    public List<SimulatorResponse> getDetails(String empCode, LocalDate workingDate){
         List<Simulator> simulatorList = simulatorRepository.findByEmpCodeAndWorkingDate(empCode,workingDate);
-        return simulatorList;
+
+        List<SimulatorResponse> filterSimulatorList = new ArrayList<>();
+
+        for(Simulator s: simulatorList){
+            SimulatorResponse filterSimulator = new SimulatorResponse();
+            filterSimulator.setInTime(s.getInTime());
+            filterSimulator.setOutTime(s.getOutTime());
+            filterSimulatorList.add(filterSimulator);
+        }
+        return filterSimulatorList;
     }
 }

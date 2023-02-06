@@ -13,9 +13,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class Simulator implements Serializable {
     Integer id;
-
     String empCode;
-
     LocalDate workingDate;
     LocalDateTime inTime;
     LocalDateTime outTime;

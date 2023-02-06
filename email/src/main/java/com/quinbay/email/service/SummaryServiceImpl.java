@@ -7,7 +7,9 @@ import com.itextpdf.text.pdf.PdfWriter;
 import com.quinbay.email.api.EmailService;
 import com.quinbay.email.api.SummaryService;
 import com.quinbay.email.model.EmailDetails;
+import com.quinbay.email.model.Employee;
 import com.quinbay.email.model.TimesheetApproval;
+import com.quinbay.email.repository.EmployeeRepository;
 import com.quinbay.email.repository.TimesheetApprovalRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -30,11 +32,11 @@ public class SummaryServiceImpl implements SummaryService {
     @Autowired
     TimesheetApprovalRepository timesheetApprovalRepository;
 
+    @Autowired
+    EmployeeRepository employeeRepository;
+
 
     Document document = new Document();
-    private static Font catFont = new Font(Font.FontFamily.TIMES_ROMAN, 18, Font.BOLD);
-    private static Font redFont = new Font(Font.FontFamily.TIMES_ROMAN, 12, Font.NORMAL, BaseColor.RED);
-    private static Font subFont = new Font(Font.FontFamily.TIMES_ROMAN, 16, Font.BOLD);
     private static Font smallBold = new Font(Font.FontFamily.TIMES_ROMAN, 12, Font.BOLD);
 
     @Override
@@ -42,14 +44,17 @@ public class SummaryServiceImpl implements SummaryService {
         List<LocalDate> weekDates = Arrays.asList(DayOfWeek.values()).stream().map(toDate::with).collect(toList());
         LocalDate fromDate = LocalDate.now();
 
+        List<Employee> details = employeeRepository.findAll();
+
         for (LocalDate date : weekDates) {
             if (date.getDayOfWeek().equals(DayOfWeek.MONDAY)) {
                 fromDate = date;
             }
         }
-        List<TimesheetApproval> email =  fetchFromTimesheet("E101",fromDate, toDate);
-
-        generatePdf(email);
+        for(Employee emp: details) {
+            List<TimesheetApproval> weekDetails = fetchFromTimesheet(emp.getEmpCode(), fromDate, toDate);
+            generatePdf(weekDetails,emp.getEmpCode(),emp.getEmail());
+        }
 
         return "Mail sent successfully";
     }
@@ -61,20 +66,19 @@ public class SummaryServiceImpl implements SummaryService {
     }
 
     @Override
-    public String generatePdf(List<TimesheetApproval> t){
-        String file_name = "/Users/vasunthra/Desktop/Attendance_Portal/" + t.get(0).getEmpCode()+ ".pdf";
+    public String generatePdf(List<TimesheetApproval> t,String empCode,String email){
+        String file_name = "/Users/vasunthra/Desktop/Attendance_Portal/" + empCode+ ".pdf";
         try {
-
             Document document = new Document();
             PdfWriter.getInstance(document, new FileOutputStream(file_name));
             document.open();
             addMetaData(document);
-            addContent(document, t);
-            System.out.println("Your employee code is " + t.get(0).getEmpCode());
+            addContent(document, t, empCode);
+            System.out.println("Your employee code is " + empCode);
             System.out.println("Weekly timesheet can be found at " + file_name);
             document.close();
             EmailDetails ed = new EmailDetails();
-            ed.setRecipient("vasunthrat@gmail.com");
+            ed.setRecipient(email);
             ed.setSubject("Weekly timesheet");
             ed.setMsgBody("Hello \n\n You can find your weekly timesheet here");
             ed.setAttachment(file_name);
@@ -94,9 +98,9 @@ public class SummaryServiceImpl implements SummaryService {
         document.addCreator("Vasunthra");
     }
 
-    private static void addContent(Document document, List<TimesheetApproval> t) throws DocumentException {
+    private static void addContent(Document document, List<TimesheetApproval> t, String empCode) throws DocumentException {
 
-        Chapter catPart = new Chapter(new Paragraph(t.get(0).getEmpCode()+ " Timesheet"), 1);
+        Chapter catPart = new Chapter(new Paragraph(empCode+ " Timesheet"), 1);
 
         Paragraph p = new Paragraph();
         LocalDate date = LocalDate.now();
@@ -108,23 +112,16 @@ public class SummaryServiceImpl implements SummaryService {
         addEmptyLine(paragraph, 2);
         catPart.addAll(paragraph);
 
-
-
         createTable(catPart, t);
 
         Paragraph gap = new Paragraph();
         addEmptyLine(gap, 3);
         catPart.addAll(gap);
 
-
         document.add(catPart);
     }
 
     private static void createTable(Section subCatPart, List<TimesheetApproval> t) throws BadElementException {
-
-        double sub_total = 0;
-        double total = 0;
-
         PdfPTable table = new PdfPTable(6);
 
         PdfPCell c1 = new PdfPCell(new Phrase("Emp Code"));
@@ -161,11 +158,8 @@ public class SummaryServiceImpl implements SummaryService {
             table.addCell(approval.getInType().toString());
             table.addCell(approval.getStatus().toString());
         }
-
-
         subCatPart.add(table);
     }
-
     private static void addEmptyLine(Paragraph paragraph, int number) {
         for (int i = 0; i < number; i++) {
             paragraph.add(new Paragraph(" "));

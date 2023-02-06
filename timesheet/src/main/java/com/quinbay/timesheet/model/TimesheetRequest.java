@@ -17,7 +17,7 @@ public class TimesheetRequest implements Serializable {
     Double wfhHours;
     Double officeHours;
     Double productiveHours;
-    Timesheet.InType inType;
+    Approval.InType inType;
     Double dayCount;
     Approval.Period period;
 

@@ -13,10 +13,4 @@ import java.util.Optional;
 public interface SimulatorRepository extends JpaRepository<Simulator,Integer> {
     List<Simulator> findByEmpCodeAndWorkingDate(String empCode, LocalDate workingDate);
 
-
-
-
-
-   // Optional<Simulator> findByEmpCodeAndInTime(String empCode, LocalDate find);
-
 }

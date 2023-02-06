@@ -3,6 +3,7 @@ package com.quinbay.email.kafka;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quinbay.email.model.TimesheetApproval;
+import com.quinbay.email.repository.TimesheetApprovalRepository;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -13,7 +14,8 @@ public class KafkaListenerService {
     @Autowired
     ObjectMapper objectMapper;
 
-
+    @Autowired
+    TimesheetApprovalRepository timesheetApprovalRepository;
 
     @KafkaListener(topics = "send.timesheet",groupId = "timesheet")
     public void getInvoiceForBilling(ConsumerRecord<?,String> consumerRecord){
@@ -26,6 +28,7 @@ public class KafkaListenerService {
 
             System.out.println("\n\t--------->Entered<----------");
             System.out.println(timesheetApproval.getEmpCode());
+            timesheetApprovalRepository.save(timesheetApproval);
         }catch (Exception e){
             e.printStackTrace();
 

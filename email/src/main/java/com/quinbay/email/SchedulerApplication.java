@@ -12,7 +12,7 @@ public class SchedulerApplication {
     @Autowired
     SummaryService summaryService;
 
-    @Scheduled(cron = "0 30 21 * * 5")
+    @Scheduled(cron = "0 30 21 * * 5")//0 30 21 * * 5(every friday)
     public void scheduleTask()
     {
         LocalDate toDate = LocalDate.now();

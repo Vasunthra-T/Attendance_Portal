@@ -12,15 +12,10 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class TimesheetApproval implements Serializable {
     String empCode;
-
     String empName;
-
     LocalDate workingDate;
-
     Double productiveHours;
-
-    Timesheet.InType inType;
-
+    Approval.InType inType;
     Approval.Status status;
 
 }

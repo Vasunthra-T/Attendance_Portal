@@ -1,6 +1,7 @@
 package com.quinbay.timesheet.model;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,6 +17,9 @@ import java.io.Serializable;
 @AllArgsConstructor
 @Table(name="approval")
 public class Approval implements Serializable {
+    public enum InType {
+        WORK_FROM_HOME, OFFICE, BOTH ;
+    }
     public enum Period {
         FIRST_HALF, SECOND_HALF ,NULL;
     }
@@ -31,12 +35,14 @@ public class Approval implements Serializable {
     @Column(name = "emp_code")
     String empCode;
 
-//
-//    @Column(name = "manager_id")
-//    String managerId;
 
     @Column(name = "day_count")
     Double dayCount;
+
+    @Column(name = "in_type")
+    @Enumerated(EnumType.STRING)
+    InType inType;
+
 
     @Column(name = "leave_period")
     @Enumerated(EnumType.STRING)
@@ -46,14 +52,14 @@ public class Approval implements Serializable {
     @Enumerated(EnumType.STRING)
     Status status;
 
-    @OneToOne
-    @JoinColumn(name = "timesheet_id", referencedColumnName = "id")
+    @OneToOne(mappedBy = "approval")
+    @JsonIgnore
     private Timesheet timesheet;
 
-    public Approval(String empCode, Double dayCount, Period period, Status status,Timesheet timesheet) {
+    public Approval(String empCode, Double dayCount,InType inType, Period period, Status status,Timesheet timesheet) {
         this.empCode = empCode;
-       // this.managerId = managerId;
         this.dayCount = dayCount;
+        this.inType = inType;
         this.period = period;
         this.status = status;
         this.timesheet = timesheet;

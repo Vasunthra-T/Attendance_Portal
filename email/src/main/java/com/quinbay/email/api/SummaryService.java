@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface SummaryService {
-    String generatePdf(List<TimesheetApproval> t);
+    String generatePdf(List<TimesheetApproval> t,String empCode, String email);
 
     String splitByEmployee(LocalDate fromDate);
 
